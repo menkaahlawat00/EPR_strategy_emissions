@@ -144,6 +144,9 @@
     .badge-green { background: var(--green-bg); color: var(--green-text); }
     .badge-amber { background: var(--amber-bg); color: var(--amber-text); }
     .badge-red   { background: var(--red-bg);   color: var(--red-text); }
+    .badge-gray  { background: var(--bg-secondary); color: var(--text-tertiary); }
+
+    .gdr-label { font-size: 11px; font-weight: 500; color: var(--text-secondary); margin: 10px 0 6px; }
 
     .swap-row { display: flex; align-items: flex-start; gap: 12px; }
     .swap-col { flex: 1; }
@@ -325,7 +328,7 @@
   <header>
     <h1>Canada EPR — Packaging swap tool</h1>
     <p>Estimate EPR cost and sustainability impact across provinces. Built for upstream packaging design decisions in Own Brands retail.</p>
-    <p class="byline">A prototype by Manks &nbsp;·&nbsp; Ontario: 2026 RPRA fee schedule · Alberta: Circular Materials 2025 published rates</p>
+    <p class="byline">A prototype by Manks &nbsp;·&nbsp; Ontario: 2026 RPRA fee schedule · Alberta: Circular Materials 2025 published rates + ARMA 2026 oversight fee</p>
   </header>
 
   <!-- PROVINCE SELECTOR -->
@@ -374,7 +377,7 @@
       </div>
     </div>
     <div class="field">
-      <label>Annual units supplied into Ontario market</label>
+      <label>Forecasted annual units sold</label>
       <input type="number" id="units" value="500000" min="1" step="1000">
     </div>
   </div>
@@ -445,22 +448,49 @@
     </div>
     <p class="note" id="epr-note">RPRA compliance fee: $0.0097/kg (2026 rate, producers &gt;50,000 kg). PRO collection and processing fees vary by material — estimates use indicative Circular Materials rate ranges. Actual fees depend on PRO selection and material-specific surcharges.</p>
 
+    <p class="section-label" style="margin-top:1rem;">EPR fee per unit sold</p>
+    <div class="grid-3">
+      <div class="metric-card">
+        <div class="metric-label">Current fee / unit</div>
+        <div class="metric-value" id="fee-per-unit-a">—</div>
+        <div class="metric-sub">¢ / unit</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Alternative fee / unit</div>
+        <div class="metric-value" id="fee-per-unit-b">—</div>
+        <div class="metric-sub">¢ / unit</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Fee / unit delta</div>
+        <div class="metric-value" id="fee-per-unit-delta">—</div>
+        <div class="metric-sub">¢ / unit</div>
+      </div>
+    </div>
+    <p class="note">This is the underlying EPR liability (regulatory + PRO fees) spread across annual units — before any markup. Producers typically recover EPR costs through product pricing, often as a flat per-unit surcharge (e.g. $0.20/unit across a brand). Compare that surcharge to the modelled fee/unit above to see whether cost recovery is under- or over-shooting the actual EPR liability for this specific SKU.</p>
+
     <hr>
 
-    <p class="section-label">Recyclability</p>
+    <p class="section-label">Recyclability &amp; Golden Design Rules alignment</p>
     <div class="swap-row">
       <div class="swap-col">
         <div class="mat-name" id="mat-a-name">—</div>
         <span class="badge" id="badge-a">—</span>
         <div class="rec-note" id="rec-note-a"></div>
+        <div class="gdr-label">Golden Design Rules (Canada Plastics Pact)</div>
+        <span class="badge" id="gdr-badge-a">—</span>
+        <div class="rec-note" id="gdr-note-a"></div>
       </div>
       <div class="arrow">→</div>
       <div class="swap-col">
         <div class="mat-name" id="mat-b-name">—</div>
         <span class="badge" id="badge-b">—</span>
         <div class="rec-note" id="rec-note-b"></div>
+        <div class="gdr-label">Golden Design Rules (Canada Plastics Pact)</div>
+        <span class="badge" id="gdr-badge-b">—</span>
+        <div class="rec-note" id="gdr-note-b"></div>
       </div>
     </div>
+    <p class="note">Golden Design Rules alignment reflects the Canada Plastics Pact's Canadian Guidance to The Consumer Goods Forum's 9 Golden Design Rules for plastic packaging (v1, rev. June 2025, plasticspact.ca). These are voluntary industry commitments, not regulatory requirements — alignment is directional for the material category, not a certification for this specific SKU.</p>
 
     <hr>
 
@@ -469,7 +499,7 @@
   </div>
 
   <footer>
-    Ontario: Built on the 2026 RPRA program fee schedule. PRO fee estimates are indicative ranges and are not a substitute for direct PRO quotation. Register with RPRA at rpra.ca. Alberta: Fee rates sourced from the published Circular Materials Alberta 2025 Fee Schedule. Rates are subject to annual revision — confirm current rates at circularmaterials.ca. This tool is for upstream design decision support only and does not constitute compliance advice.
+    Ontario: Built on the 2026 RPRA program fee schedule. PRO fee estimates are indicative ranges and are not a substitute for direct PRO quotation. Register with RPRA at rpra.ca. Alberta: PRO fee rates sourced from the published Circular Materials Alberta 2025 Fee Schedule (confirm at circularmaterials.ca) plus the ARMA EPR Oversight Fee (2026 final rate: $0.0334/kg above threshold, flat $180/year below — source: ARMA EPR Oversight Fee Guide, March 2026, albertarecycling.ca). Rates are subject to annual revision. This tool is for upstream design decision support only and does not constitute compliance advice.
   </footer>
 
 </div>
@@ -478,7 +508,9 @@
 // Province fee data
 // Ontario PRO fees: indicative estimates (not publicly published)
 // Alberta PRO fees: published Circular Materials Alberta 2025 Fee Schedule (cents/kg converted to $/kg)
-// Note: Alberta has no separate regulatory fee equivalent to RPRA; ARMA oversight fee is minimal and included in Circular Materials rates
+// Alberta regulatory fee: ARMA EPR Oversight Fee Guide, 2026 final rates (PPP category) —
+// Variable rate $0.0334/kg applies above ARMA's minimum supply threshold; producers below that
+// threshold instead pay a flat $180/year fee (threshold weight not published — not modeled here).
 const FEES = {
   ON: {
     name: 'Ontario',
@@ -501,9 +533,9 @@ const FEES = {
   },
   AB: {
     name: 'Alberta',
-    regFee: 0,     // ARMA oversight fee negligible / included in CM rates
-    regFeeLabel: 'Regulatory oversight fee',
-    regFeeNote: 'Alberta ARMA oversight fee is incorporated into Circular Materials rates.',
+    regFee: 0.0334, // ARMA EPR Oversight Fee (PPP), 2026 final variable rate — separate from CM/PRO rates
+    regFeeLabel: 'ARMA EPR oversight fee (PPP, 2026 final)',
+    regFeeNote: 'Variable rate for producers above ARMA\'s minimum PPP supply threshold. Below that threshold, producers instead pay a flat $180/year fee (not modeled here — threshold weight not published). Paid to ARMA directly, separate from Circular Materials PRO fees.',
     proRates: {
       // Source: Circular Materials Alberta 2025 Fee Schedule (published)
       // Rates in $/kg (converted from cents/kg)
@@ -523,21 +555,35 @@ const FEES = {
   },
 };
 
+// gdr: alignment with the Canada Plastics Pact "Golden Design Rules for Plastic Packaging"
+// (Canadian Guidance, v1, rev. June 2025 — plasticspact.ca). GDRs apply to plastic packaging
+// only; non-plastic materials are out of scope ('na'). Status is a directional read on the
+// *material category*, not a specific SKU — actual alignment depends on execution (colour,
+// labels, adhesives, barrier layers, mono- vs multi-material construction).
 const MATERIALS = {
-  plastic_rigid:    { name: 'Rigid plastic (PET/HDPE)', recyclability: 'amber', rec_label: 'Conditionally recyclable', rec_note: 'Accepted in Blue Box but recovery rates vary by resin type and colour' },
-  plastic_flexible: { name: 'Flexible plastic film',    recyclability: 'red',   rec_label: 'Difficult to recycle',      rec_note: 'Limited processing infrastructure across both Ontario and Alberta' },
-  plastic_foam:     { name: 'Foam / EPS',               recyclability: 'red',   rec_label: 'Rarely recyclable',         rec_note: 'Low commodity value, most facilities do not accept EPS' },
-  paper_corrugated: { name: 'Corrugated cardboard',     recyclability: 'green', rec_label: 'Highly recyclable',         rec_note: 'Strong recovery infrastructure, high commodity value in both provinces' },
-  paper_boxboard:   { name: 'Boxboard / paperboard',    recyclability: 'green', rec_label: 'Highly recyclable',         rec_note: 'Well-accepted across Blue Box programs in both provinces' },
-  glass:            { name: 'Glass',                    recyclability: 'amber', rec_label: 'Recyclable with caveats',   rec_note: 'Weight increases transport emissions; broken glass contaminates other streams' },
-  metal_steel:      { name: 'Steel / tin',              recyclability: 'green', rec_label: 'Highly recyclable',         rec_note: 'High commodity value, well-established processing stream' },
-  metal_alum:       { name: 'Aluminium',                recyclability: 'green', rec_label: 'Highly recyclable',         rec_note: 'Highest commodity value of any packaging material' },
-  multi_layer:      { name: 'Multi-layer / laminate',   recyclability: 'red',   rec_label: 'Not recyclable',            rec_note: 'Mixed material construction prevents separation; landfill outcome likely' },
+  plastic_rigid:    { name: 'Rigid plastic (PET/HDPE)', recyclability: 'amber', rec_label: 'Conditionally recyclable', rec_note: 'Accepted in Blue Box but recovery rates vary by resin type and colour',
+    gdr: { status: 'amber', label: 'Partially aligned', note: 'GDR 1 & 7: aligns if kept clear/uncoloured (PET) or natural (HDPE/PP), mono-material, and free of PVC/PETG/PS in labels, closures, or liners — depends on execution, not just material choice.' } },
+  plastic_flexible: { name: 'Flexible plastic film',    recyclability: 'red',   rec_label: 'Difficult to recycle',      rec_note: 'Limited processing infrastructure across both Ontario and Alberta',
+    gdr: { status: 'amber', label: 'Partially aligned', note: 'GDR 6: only aligns if truly mono-material (>90% mono-PE or mono-PP, density <1 g/cm³, barrier layers ≤10%). Many flexible films on the market are mixed-material laminates that miss this threshold.' } },
+  plastic_foam:     { name: 'Foam / EPS',               recyclability: 'red',   rec_label: 'Rarely recyclable',         rec_note: 'Low commodity value, most facilities do not accept EPS',
+    gdr: { status: 'red', label: 'Not aligned', note: 'GDR 2(c) explicitly calls to eliminate EPS/PS from packaging — this is a named "problematic element," not just a low-recyclability material.' } },
+  paper_corrugated: { name: 'Corrugated cardboard',     recyclability: 'green', rec_label: 'Highly recyclable',         rec_note: 'Strong recovery infrastructure, high commodity value in both provinces',
+    gdr: { status: 'na', label: 'Not applicable', note: 'Golden Design Rules apply to plastic packaging only — fibre-based materials are out of scope.' } },
+  paper_boxboard:   { name: 'Boxboard / paperboard',    recyclability: 'green', rec_label: 'Highly recyclable',         rec_note: 'Well-accepted across Blue Box programs in both provinces',
+    gdr: { status: 'na', label: 'Not applicable', note: 'Golden Design Rules apply to plastic packaging only — fibre-based materials are out of scope.' } },
+  glass:            { name: 'Glass',                    recyclability: 'amber', rec_label: 'Recyclable with caveats',   rec_note: 'Weight increases transport emissions; broken glass contaminates other streams',
+    gdr: { status: 'na', label: 'Not applicable', note: 'Golden Design Rules apply to plastic packaging only — glass is out of scope.' } },
+  metal_steel:      { name: 'Steel / tin',              recyclability: 'green', rec_label: 'Highly recyclable',         rec_note: 'High commodity value, well-established processing stream',
+    gdr: { status: 'na', label: 'Not applicable', note: 'Golden Design Rules apply to plastic packaging only — metal is out of scope.' } },
+  metal_alum:       { name: 'Aluminium',                recyclability: 'green', rec_label: 'Highly recyclable',         rec_note: 'Highest commodity value of any packaging material',
+    gdr: { status: 'na', label: 'Not applicable', note: 'Golden Design Rules apply to plastic packaging only — metal is out of scope.' } },
+  multi_layer:      { name: 'Multi-layer / laminate',   recyclability: 'red',   rec_label: 'Not recyclable',            rec_note: 'Mixed material construction prevents separation; landfill outcome likely',
+    gdr: { status: 'red', label: 'Not aligned', note: 'GDR 6 explicitly excludes aluminium foil, PVC, PVDC, and fibre from flexible packaging, and GDR 2 limits additives and bans PVC/PVDC — multi-layer laminates are the category these rules are most directly aimed at eliminating.' } },
 };
 
 var selectedProvince = 'ON';
 
-// SKU data: name, category, packaging description, material key, pkg weight (g), typical annual Ontario units, suggested alt material, suggested alt weight (g), epr risk, caveat
+// SKU data: name, category, packaging description, material key, pkg weight (g), forecasted annual units sold (province-agnostic), suggested alt material, suggested alt weight (g), epr risk, caveat
 const SKUS = [
   // PANTRY
   { name: 'Pasta Sauce Original 680 ml',         cat: 'Pantry',           pkg: 'Glass jar + steel lid',              matA: 'glass',            wA: 310, units: 900000,  matB: 'metal_steel',      wB: 62,  risk: 'med',  caveat: 'Glass jar weight estimated at 310 g — typical for a 680 ml sauce jar. Steel can shown as alternative: lower PRO fee, higher Ontario recovery rate, and dramatically lighter, reducing transport emissions. Trade-off is consumer perception of canned vs jarred sauce.' },
@@ -662,7 +708,7 @@ function selectSku(idx) {
     '<strong>' + s.name + '</strong>' +
     '<span class="risk-pill ' + riskClass + '">' + riskLabel + '</span><br>' +
     'Current packaging: ' + s.pkg + '<br>' +
-    'Assumed Ontario units/year: ' + s.units.toLocaleString('en-CA') +
+    'Forecasted annual units sold: ' + s.units.toLocaleString('en-CA') +
     '<div class="sku-caveat">' + s.caveat + '</div>';
 
   calculate();
@@ -708,13 +754,13 @@ function selectProvince(code, btn) {
   var prov = FEES[code];
   var notes = {
     ON: '<strong>Ontario:</strong> RPRA compliance fee $0.0097/kg (confirmed 2026 rate). PRO collection fees are indicative estimates — Ontario PRO rates are not publicly published and are set through a private fee-setting process. Actual fees require direct quotation from your PRO (Circular Materials, Ryse Solutions, or H2 Compliance).',
-    AB: '<strong>Alberta:</strong> Rates from the published Circular Materials Alberta 2025 Fee Schedule. No separate regulatory fee — ARMA oversight is incorporated into CM rates. PET (121¢/kg) and HDPE (48¢/kg) are separate in the AB schedule; the tool uses a blended rate for the combined rigid plastic category. True plastic laminates are 163¢/kg in Alberta.',
+    AB: '<strong>Alberta:</strong> PRO rates from the published Circular Materials Alberta 2025 Fee Schedule, plus a separate ARMA EPR oversight fee of $0.0334/kg (2026 final rate, producers above ARMA\'s minimum PPP threshold; smaller producers pay a flat $180/year instead). PET (121¢/kg) and HDPE (48¢/kg) are separate in the AB schedule; the tool uses a blended rate for the combined rigid plastic category. True plastic laminates are 163¢/kg in Alberta.',
   };
   document.getElementById('prov-note').innerHTML = notes[code];
 
   var eprNotes = {
     ON: 'RPRA compliance fee: $0.0097/kg (2026 rate, producers &gt;50,000 kg). PRO collection and processing fees vary by material — estimates use indicative Circular Materials rate ranges. Actual fees depend on PRO selection and material-specific surcharges.',
-    AB: 'Rates: Circular Materials Alberta 2025 published fee schedule (cents/kg). No separate RPRA-equivalent regulatory fee in Alberta. PET containers 121¢/kg · HDPE 48¢/kg · Flexible plastic 197¢/kg · Corrugated 69¢/kg · Boxboard 38¢/kg · Glass 44¢/kg · Steel 66¢/kg · Aluminium 71¢/kg · Plastic laminates 163¢/kg.',
+    AB: 'ARMA EPR oversight fee: $0.0334/kg (2026 final rate, producers above minimum PPP threshold; flat $180/year below threshold). PRO rates: Circular Materials Alberta 2025 published fee schedule (cents/kg). PET containers 121¢/kg · HDPE 48¢/kg · Flexible plastic 197¢/kg · Corrugated 69¢/kg · Boxboard 38¢/kg · Glass 44¢/kg · Steel 66¢/kg · Aluminium 71¢/kg · Plastic laminates 163¢/kg.',
   };
   document.getElementById('epr-note').innerHTML = eprNotes[code];
 
@@ -724,9 +770,16 @@ function selectProvince(code, btn) {
 // Calculator
 function fmt(n) { return Math.round(n).toLocaleString('en-CA'); }
 function fmtDollar(n) { return (n < 0 ? '-$' : '$') + fmt(Math.abs(n)); }
+function fmtCents(n) { return (n < 0 ? '-' : '') + (Math.abs(n) * 100).toFixed(2) + '¢'; }
 function getBadgeClass(rec) {
   if (rec === 'green') return 'badge badge-green';
   if (rec === 'amber') return 'badge badge-amber';
+  return 'badge badge-red';
+}
+function getGdrBadgeClass(status) {
+  if (status === 'green') return 'badge badge-green';
+  if (status === 'amber') return 'badge badge-amber';
+  if (status === 'na') return 'badge badge-gray';
   return 'badge badge-red';
 }
 
@@ -766,6 +819,17 @@ function calculate() {
   fd.textContent = fmtDollar(feeDelta);
   fd.className = 'metric-value ' + (feeDelta > 0 ? 'delta-positive' : 'delta-negative');
 
+  var feePerUnitA = units > 0 ? feeA / units : 0;
+  var feePerUnitB = units > 0 ? feeB / units : 0;
+  var feePerUnitDelta = feePerUnitA - feePerUnitB;
+
+  document.getElementById('fee-per-unit-a').textContent = fmtCents(feePerUnitA);
+  document.getElementById('fee-per-unit-b').textContent = fmtCents(feePerUnitB);
+
+  var fpud = document.getElementById('fee-per-unit-delta');
+  fpud.textContent = fmtCents(feePerUnitDelta);
+  fpud.className = 'metric-value ' + (feePerUnitDelta > 0 ? 'delta-positive' : 'delta-negative');
+
   document.getElementById('mat-a-name').textContent = matA.name;
   document.getElementById('mat-b-name').textContent = matB.name;
 
@@ -778,6 +842,16 @@ function calculate() {
   bb.textContent = matB.rec_label;
   bb.className = getBadgeClass(matB.recyclability);
   document.getElementById('rec-note-b').textContent = matB.rec_note;
+
+  var ga = document.getElementById('gdr-badge-a');
+  ga.textContent = matA.gdr.label;
+  ga.className = getGdrBadgeClass(matA.gdr.status);
+  document.getElementById('gdr-note-a').textContent = matA.gdr.note;
+
+  var gb = document.getElementById('gdr-badge-b');
+  gb.textContent = matB.gdr.label;
+  gb.className = getGdrBadgeClass(matB.gdr.status);
+  document.getElementById('gdr-note-b').textContent = matB.gdr.note;
 
   var noSwap = (matAKey === matBKey) && (wA === wB);
 
@@ -797,7 +871,8 @@ function calculate() {
     summaryText =
       'No material swap is recommended for this SKU. ' +
       'Current packaging is ' + matA.name.toLowerCase() + ' (' + matA.rec_label.toLowerCase() + ') ' +
-      'at an estimated EPR obligation of ' + fmtDollar(feeA) + '/year in ' + provName + ' across ' + fmt(units) + ' units. ' +
+      'at an estimated EPR obligation of ' + fmtDollar(feeA) + '/year in ' + provName + ' across ' + fmt(units) + ' units — ' +
+      'equivalent to ' + fmtCents(feePerUnitA) + ' per unit. ' +
       'The lever here is not format change — see the SKU note above for the specific improvement pathway. ' +
       'This analysis is for upstream design decision support — confirm final obligations with your PRO before reporting.';
   } else {
@@ -822,6 +897,7 @@ function calculate() {
     summaryText =
       'Switching from ' + matA.name.toLowerCase() + ' to ' + matB.name.toLowerCase() +
       ' at ' + fmt(units) + ' units/year ' + weightText + ', generates ' + savingsText +
+      ' (' + fmtCents(feePerUnitA) + '/unit today vs ' + fmtCents(feePerUnitB) + '/unit under the alternative)' +
       ' based on ' + rateNote + ', and ' + recText +
       '. This analysis is for upstream design decision support — confirm final obligations with your PRO before reporting.';
   }
