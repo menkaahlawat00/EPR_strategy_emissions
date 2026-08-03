@@ -60,11 +60,37 @@ GitHub (`menkaahlawat00/EPR_strategy_product`) with no local clone; cloned it to
    entry, and a `getGdrBadgeClass()` helper alongside the existing
    `getBadgeClass()`.
 
+5. **Fixed hardcoded Ontario-specific claims in SKU caveats and material notes.**
+   Menka flagged that switching to Alberta still showed Ontario-flavoured text
+   (e.g. "PP tub is recoverable in **Ontario** when clean" on the Greek Yogurt
+   SKU) — because SKU `caveat` strings and two `MATERIALS.rec_note` fields are
+   static, not swapped per `selectedProvince`. Went through every "Ontario"
+   mention in recyclability commentary (11 SKU caveats + 2 material notes + the
+   page `<title>`) and, **without inventing Alberta-specific recycling/MRF data
+   that isn't verified**, genericized claims that plausibly hold in both
+   provinces (e.g. "well-recovered in Ontario" → "a well-recovered format
+   broadly across Canadian recycling programs"; "Blue Box" → "curbside
+   recycling collection/programs," since "Blue Box" is Ontario program
+   branding I can't confirm Alberta uses). One caveat (LDPE pouches, frozen
+   veg) cited a real Ontario-specific fact — a Blue Box acceptance date of Jan
+   2026 — so instead of deleting or falsely generalizing it, kept it but scoped
+   it explicitly as Ontario's program and added "(Alberta program acceptance
+   may differ — confirm with Circular Materials)" rather than asserting
+   anything about Alberta. Also updated the `<title>` tag, which still said
+   "Ontario Blue Box EPR" despite the page itself already being multi-province.
+   **Known gap:** SKU caveats are still a single static string, not a true
+   per-province data structure — genericizing is a stopgap, not a full fix.
+   Flagged in `PMD.md` as an open item if real sourced Alberta-specific MRF/
+   recycling-program data becomes available later.
+
 **Verified in-browser** (via a local `python3 -m http.server`, Chrome): confirmed
 the per-unit metric renders and matches the underlying annual-fee math, confirmed
 the Alberta province note now correctly separates the ARMA fee from Circular
-Materials PRO rates, and confirmed the GDR badges render correctly for both the
-"not applicable" (paper) and "Not aligned" (foam/EPS, multi-layer) cases.
+Materials PRO rates, confirmed the GDR badges render correctly for both the
+"not applicable" (paper) and "Not aligned" (foam/EPS, multi-layer) cases, and
+confirmed (via direct JS calls after browser-viewport coordinates drifted
+mid-session) that selecting Alberta + the Greek Yogurt SKU now shows the
+genericized caveat text instead of the old Ontario-specific wording.
 
 **Not yet done / carried to next session:**
 - Confirm ARMA's PPP minimum supply threshold weight and, if useful, model the

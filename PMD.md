@@ -95,6 +95,12 @@ actual construction.
   prototype stage
 - Consider whether "fee per unit" should also show a suggested/example flat
   cost-recovery surcharge for direct side-by-side comparison
+- SKU `caveat` text and `MATERIALS.rec_note` are single static strings, not
+  swapped per province. Ontario-specific claims were genericized (not deleted
+  or replaced with unverified Alberta specifics) — if real sourced
+  Alberta-specific MRF/recycling-program data becomes available, consider
+  restructuring these fields as `{ON: '...', AB: '...'}` per-province variants
+  instead of generic text
 
 ## Repo
 - Live: https://menkaahlawat00.github.io/EPR_strategy_product/
